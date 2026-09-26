@@ -47,7 +47,7 @@ Out of scope: unrelated template improvements and the inherited `Item` demo.
 - [x] T6 Add an atomic claim endpoint with a database-level exclusivity guarantee
 - [x] T7 Public per-user gift listing behind a shareable link
 - [x] T8 Regenerate `openapi.json`, the frontend client and the route tree
-- [ ] T9 Align `GiftForm.tsx` and add a navigation entry
+- [x] T9 Align `GiftForm.tsx` and add a navigation entry
 - [ ] T10 Move the gift e2e spec out of `frontend/temp_tests`
 
 ## Authorized scope
@@ -69,7 +69,7 @@ T1, T2, T3 only: domain vocabulary, migration and crud alignment.
 
 ## Progress
 
-T1 through T8 are done and verified.
+T1 through T9 are done and verified.
 
 - `Gift` now exposes `approximate_price`, `photo_url`, `product_link` and
   `reserved_by_id`; `is_reserved` and the whole `GiftUpdate.is_reserved` surface
@@ -104,17 +104,24 @@ T1 through T8 are done and verified.
   stayed invisible because its route was absent from the route tree; regenerating
   the tree made eight latent GiftForm errors surface. Including `.tsx` reveals
   thirteen errors across six files.
-- FINDING: the router generator rewrote `create-gift.tsx` from
-  `/_layout/create-gift` to `/create-gift`, because the file lives at
-  `routes/create-gift.tsx` and not under `routes/_layout/`. It must move under
-  `_layout/` to render inside the authenticated shell. That is T9.
+- The router generator had rewritten `create-gift.tsx` from `/_layout/create-gift`
+  to `/create-gift`, because the file lived at `routes/create-gift.tsx` and not
+  under `routes/_layout/`. It moved to `routes/_layout/create-gift.tsx`, so it now
+  renders inside the authenticated shell at URL `/create-gift`, and the page uses
+  the Chakra Container/Heading convention instead of the auth-page Tailwind
+  wrapper that hid it on small screens.
+- `GiftForm` now uploads the optional image first and then creates the gift with
+  JSON, instead of sending multipart to the create endpoint.
+- Added a "Create Gift" entry to the sidebar.
 
 ## Evidence
 
 - `cd backend && .venv/bin/python -m pytest` -> 82 passed, 0 failed.
 - Frontend: `scripts/generate-client.sh` regenerated the spec (20 paths) and the
-  client; `npm run build` generates the route tree and succeeds after the
-  `Appearance.tsx` fix. A tsc run after that reports the eight GiftForm errors.
+  client; `npm run build` generates the route tree and succeeds. `tsc` reports
+  zero errors, including `GiftForm.tsx` now that the route tree reaches it and the
+  file sits under `_layout/`. Browser-level verification is still pending and is
+  the point of T10.
 - Concurrency proof: 12 distinct users claimed the same gift simultaneously
   against the running server. Exactly one returned 200, eleven returned 409, none
   errored, and the gift ended up reserved.
