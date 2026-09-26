@@ -75,6 +75,17 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
 
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app
+          ignore:
+            - .venv
+            - .idea
+            - .pytest_cache
+            - __pycache__
+
   backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
     restart: always
