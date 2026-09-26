@@ -1,11 +1,11 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlmodel import func, select
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, get_current_user
 from app.models import (
     Gift,
     GiftCreate,
@@ -67,10 +67,12 @@ def read_public_gifts(
     return GiftsPublic(data=gifts, count=count)
 
 
-@router.post("/image", response_model=GiftImageUpload)
-def upload_gift_image(
-    *, current_user: CurrentUser, file: UploadFile = File(...)
-) -> Any:
+@router.post(
+    "/image",
+    response_model=GiftImageUpload,
+    dependencies=[Depends(get_current_user)],
+)
+def upload_gift_image(*, file: UploadFile = File(...)) -> Any:
     """
     Store an uploaded gift image and return the URL to reference from a gift.
 
@@ -100,9 +102,7 @@ def create_gift(
     """
     Create a new gift owned by the current user.
     """
-    return crud.create_gift(
-        session=session, gift_in=gift_in, owner_id=current_user.id
-    )
+    return crud.create_gift(session=session, gift_in=gift_in, owner_id=current_user.id)
 
 
 @router.put("/{id}", response_model=GiftPublic)

@@ -1,7 +1,6 @@
 # ABOUTME: Unit tests for gift CRUD operations.
 # ABOUTME: Verifies the functionality of creating, reading, updating, and deleting gifts.
 
-import uuid
 
 from sqlmodel import Session
 

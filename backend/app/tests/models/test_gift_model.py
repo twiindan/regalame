@@ -10,18 +10,20 @@ sqlite_file_name = "test.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 engine = create_engine(sqlite_url, echo=True)
 
-def create_db_and_tables():
+
+def create_db_and_tables() -> None:
     SQLModel.metadata.drop_all(engine)
     SQLModel.metadata.create_all(engine)
 
-def test_create_gift():
+
+def test_create_gift() -> None:
     create_db_and_tables()
     with Session(engine) as session:
         # Create a test user
         user = User(
             email="test@example.com",
             hashed_password="hashedpassword",
-            full_name="Test User"
+            full_name="Test User",
         )
         session.add(user)
         session.commit()
