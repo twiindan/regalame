@@ -46,7 +46,7 @@ Out of scope: unrelated template improvements and the inherited `Item` demo.
 - [x] T5 Register the gifts router and complete the CRUD endpoints
 - [x] T6 Add an atomic claim endpoint with a database-level exclusivity guarantee
 - [x] T7 Public per-user gift listing behind a shareable link
-- [ ] T8 Regenerate `openapi.json`, the frontend client and the route tree
+- [x] T8 Regenerate `openapi.json`, the frontend client and the route tree
 - [ ] T9 Align `GiftForm.tsx` and add a navigation entry
 - [ ] T10 Move the gift e2e spec out of `frontend/temp_tests`
 
@@ -69,7 +69,7 @@ T1, T2, T3 only: domain vocabulary, migration and crud alignment.
 
 ## Progress
 
-T1 through T7 are done and verified.
+T1 through T8 are done and verified.
 
 - `Gift` now exposes `approximate_price`, `photo_url`, `product_link` and
   `reserved_by_id`; `is_reserved` and the whole `GiftUpdate.is_reserved` surface
@@ -95,10 +95,26 @@ T1 through T7 are done and verified.
   because the shared public list must not reveal which user claimed a gift.
 - The public listing is unauthenticated and reachable from a shareable link.
   A second claim returns 409 and reserving your own gift returns 400.
+- Regenerated the OpenAPI spec, the hey-api client (`GiftsService` with all eight
+  operations) and the TanStack route tree, which now includes `create-gift`.
+- Fixed a pre-existing template type error in `Appearance.tsx` that blocked the
+  build independently of this feature.
+- FINDING: `tsconfig.json` only includes `src/**/*.ts`, so a `.tsx` file is
+  type-checked only when a `.ts` file reaches it through an import. `GiftForm.tsx`
+  stayed invisible because its route was absent from the route tree; regenerating
+  the tree made eight latent GiftForm errors surface. Including `.tsx` reveals
+  thirteen errors across six files.
+- FINDING: the router generator rewrote `create-gift.tsx` from
+  `/_layout/create-gift` to `/create-gift`, because the file lives at
+  `routes/create-gift.tsx` and not under `routes/_layout/`. It must move under
+  `_layout/` to render inside the authenticated shell. That is T9.
 
 ## Evidence
 
 - `cd backend && .venv/bin/python -m pytest` -> 82 passed, 0 failed.
+- Frontend: `scripts/generate-client.sh` regenerated the spec (20 paths) and the
+  client; `npm run build` generates the route tree and succeeds after the
+  `Appearance.tsx` fix. A tsc run after that reports the eight GiftForm errors.
 - Concurrency proof: 12 distinct users claimed the same gift simultaneously
   against the running server. Exactly one returned 200, eleven returned 409, none
   errored, and the gift ended up reserved.
