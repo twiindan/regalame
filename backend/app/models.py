@@ -45,6 +45,7 @@ class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
     items: list["Item"] = Relationship(back_populates="owner", cascade_delete=True)
+    gifts: list["Gift"] = Relationship(back_populates="owner", cascade_delete=True)
 
 
 # Properties to return via API, id is always required
@@ -89,6 +90,46 @@ class ItemPublic(ItemBase):
 
 class ItemsPublic(SQLModel):
     data: list[ItemPublic]
+    count: int
+
+
+# Shared properties
+class GiftBase(SQLModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
+    price: float | None = Field(default=None, ge=0)
+    image: str | None = Field(default=None, max_length=255)
+    link: str | None = Field(default=None, max_length=255)
+    is_reserved: bool = Field(default=False)
+
+
+# Properties to receive on gift creation
+class GiftCreate(GiftBase):
+    pass
+
+
+# Properties to receive on gift update
+class GiftUpdate(GiftBase):
+    name: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+    is_reserved: bool | None = Field(default=None)
+
+
+# Database model, database table inferred from class name
+class Gift(GiftBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(max_length=255)
+    owner_id: uuid.UUID = Field(foreign_key="user.id", nullable=False)
+    owner: Mapped["User"] = Relationship(back_populates="gifts")
+
+
+# Properties to return via API, id is always required
+class GiftPublic(GiftBase):
+    id: uuid.UUID
+    owner_id: uuid.UUID
+
+
+class GiftsPublic(SQLModel):
+    data: List[GiftPublic]
     count: int
 
 
