@@ -4,6 +4,22 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
+  GiftsReadGiftsData,
+  GiftsReadGiftsResponse,
+  GiftsCreateGiftData,
+  GiftsCreateGiftResponse,
+  GiftsReadPublicGiftsData,
+  GiftsReadPublicGiftsResponse,
+  GiftsUploadGiftImageData,
+  GiftsUploadGiftImageResponse,
+  GiftsReadGiftData,
+  GiftsReadGiftResponse,
+  GiftsUpdateGiftData,
+  GiftsUpdateGiftResponse,
+  GiftsDeleteGiftData,
+  GiftsDeleteGiftResponse,
+  GiftsClaimGiftData,
+  GiftsClaimGiftResponse,
   ItemsReadItemsData,
   ItemsReadItemsResponse,
   ItemsCreateItemData,
@@ -23,6 +39,8 @@ import type {
   LoginResetPasswordResponse,
   LoginRecoverPasswordHtmlContentData,
   LoginRecoverPasswordHtmlContentResponse,
+  PrivateCreateUserData,
+  PrivateCreateUserResponse,
   UsersReadUsersData,
   UsersReadUsersResponse,
   UsersCreateUserData,
@@ -45,6 +63,212 @@ import type {
   UtilsTestEmailResponse,
   UtilsHealthCheckResponse,
 } from "./types.gen"
+
+export class GiftsService {
+  /**
+   * Read Gifts
+   * Retrieve gifts.
+   *
+   * Superusers see every gift; regular users only see their own.
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns GiftsPublic Successful Response
+   * @throws ApiError
+   */
+  public static readGifts(
+    data: GiftsReadGiftsData = {},
+  ): CancelablePromise<GiftsReadGiftsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/gifts/",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Gift
+   * Create a new gift owned by the current user.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns GiftPublic Successful Response
+   * @throws ApiError
+   */
+  public static createGift(
+    data: GiftsCreateGiftData,
+  ): CancelablePromise<GiftsCreateGiftResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/gifts/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Public Gifts
+   * Public listing of another user's gifts, reachable from the shared link.
+   *
+   * No authentication on purpose: the product spec requires that visitors without
+   * an account can open a shared link and see the list.
+   * @param data The data for the request.
+   * @param data.userId
+   * @param data.skip
+   * @param data.limit
+   * @returns GiftsPublic Successful Response
+   * @throws ApiError
+   */
+  public static readPublicGifts(
+    data: GiftsReadPublicGiftsData,
+  ): CancelablePromise<GiftsReadPublicGiftsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/gifts/public/{user_id}",
+      path: {
+        user_id: data.userId,
+      },
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Upload Gift Image
+   * Store an uploaded gift image and return the URL to reference from a gift.
+   *
+   * Authentication is required even though no user data is read.
+   * @param data The data for the request.
+   * @param data.formData
+   * @returns GiftImageUpload Successful Response
+   * @throws ApiError
+   */
+  public static uploadGiftImage(
+    data: GiftsUploadGiftImageData,
+  ): CancelablePromise<GiftsUploadGiftImageResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/gifts/image",
+      formData: data.formData,
+      mediaType: "multipart/form-data",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Gift
+   * Get a gift by ID.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns GiftPublic Successful Response
+   * @throws ApiError
+   */
+  public static readGift(
+    data: GiftsReadGiftData,
+  ): CancelablePromise<GiftsReadGiftResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/gifts/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update Gift
+   * Update a gift. Reservations are not updatable here.
+   * @param data The data for the request.
+   * @param data.id
+   * @param data.requestBody
+   * @returns GiftPublic Successful Response
+   * @throws ApiError
+   */
+  public static updateGift(
+    data: GiftsUpdateGiftData,
+  ): CancelablePromise<GiftsUpdateGiftResponse> {
+    return __request(OpenAPI, {
+      method: "PUT",
+      url: "/api/v1/gifts/{id}",
+      path: {
+        id: data.id,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Gift
+   * Delete a gift.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deleteGift(
+    data: GiftsDeleteGiftData,
+  ): CancelablePromise<GiftsDeleteGiftResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/gifts/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Claim Gift
+   * Claim a gift ("Me lo quedo").
+   *
+   * Exclusivity is enforced by the database, not by this check: the UPDATE only
+   * matches a row whose reserved_by_id is still NULL, so exactly one concurrent
+   * caller can win and every other one gets 409.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns GiftPublic Successful Response
+   * @throws ApiError
+   */
+  public static claimGift(
+    data: GiftsClaimGiftData,
+  ): CancelablePromise<GiftsClaimGiftResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/gifts/{id}/claim",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
 
 export class ItemsService {
   /**
@@ -265,6 +489,30 @@ export class LoginService {
       path: {
         email: data.email,
       },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class PrivateService {
+  /**
+   * Create User
+   * Create a new user.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns UserPublic Successful Response
+   * @throws ApiError
+   */
+  public static createUser(
+    data: PrivateCreateUserData,
+  ): CancelablePromise<PrivateCreateUserResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/private/users/",
+      body: data.requestBody,
+      mediaType: "application/json",
       errors: {
         422: "Validation Error",
       },

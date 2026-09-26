@@ -11,6 +11,7 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as CreateGiftImport } from './routes/create-gift'
 import { Route as SignupImport } from './routes/signup'
 import { Route as ResetPasswordImport } from './routes/reset-password'
 import { Route as RecoverPasswordImport } from './routes/recover-password'
@@ -22,6 +23,11 @@ import { Route as LayoutItemsImport } from './routes/_layout/items'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
 
 // Create/Update Routes
+
+const CreateGiftRoute = CreateGiftImport.update({
+  path: '/create-gift',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const SignupRoute = SignupImport.update({
   path: '/signup',
@@ -108,6 +114,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexImport
       parentRoute: typeof LayoutImport
     }
+    '/create-gift': {
+      preLoaderRoute: typeof CreateGiftImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -124,6 +134,7 @@ export const routeTree = rootRoute.addChildren([
   RecoverPasswordRoute,
   ResetPasswordRoute,
   SignupRoute,
+  CreateGiftRoute,
 ])
 
 /* prettier-ignore-end */

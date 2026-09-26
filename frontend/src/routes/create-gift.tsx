@@ -7,7 +7,7 @@ import { createFileRoute } from "@tanstack/react-router"
 
 import GiftForm from "@/components/Items/GiftForm"
 
-export const Route = createFileRoute("/_layout/create-gift")({
+export const Route = createFileRoute("/create-gift")({
   component: CreateGift,
 })
 
