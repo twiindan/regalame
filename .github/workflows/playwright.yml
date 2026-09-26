@@ -68,6 +68,8 @@ jobs:
       working-directory: backend
     - run: npm ci
       working-directory: frontend
+    - name: Create .env for CI
+      run: cp .env.example .env
     - run: uv run bash scripts/generate-client.sh
       env:
         VIRTUAL_ENV: backend/.venv
