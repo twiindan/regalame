@@ -1,4 +1,6 @@
 import logging
+import shutil
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -6,6 +8,7 @@ from typing import Any
 
 import emails  # type: ignore
 import jwt
+from fastapi import HTTPException, UploadFile, status
 from jinja2 import Template
 from jwt.exceptions import InvalidTokenError
 
@@ -14,6 +17,36 @@ from app.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+# Uploaded images are stored with a generated name under this directory and are
+# served back from /static.
+ALLOWED_IMAGE_TYPES = {
+    "image/gif": ".gif",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+
+
+def save_upload_file_to_static(file: UploadFile, folder: str = "gifts") -> str:
+    """Store an uploaded image under static/<folder> and return its public URL."""
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Only images are allowed.",
+        )
+
+    destination_dir = STATIC_DIR / folder
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    suffix = ALLOWED_IMAGE_TYPES[file.content_type]
+    destination = destination_dir / f"{uuid.uuid4().hex}{suffix}"
+
+    with destination.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    return f"/static/{folder}/{destination.name}"
 
 
 @dataclass

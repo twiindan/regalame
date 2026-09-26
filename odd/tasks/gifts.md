@@ -42,8 +42,8 @@ Out of scope: unrelated template improvements and the inherited `Item` demo.
       with `reserved_by_id`
 - [x] T2 Add an Alembic migration that owns the `gift` table
 - [x] T3 Align the `crud.py` gift functions with the crud tests
-- [ ] T4 Implement `save_upload_file_to_static` and serve static uploads
-- [ ] T5 Register the gifts router and complete the CRUD endpoints
+- [x] T4 Implement `save_upload_file_to_static` and serve static uploads
+- [x] T5 Register the gifts router and complete the CRUD endpoints
 - [ ] T6 Add an atomic claim endpoint with a database-level exclusivity guarantee
 - [ ] T7 Public per-user gift listing behind a shareable link
 - [ ] T8 Regenerate `openapi.json`, the frontend client and the route tree
@@ -69,7 +69,7 @@ T1, T2, T3 only: domain vocabulary, migration and crud alignment.
 
 ## Progress
 
-T1, T2 and T3 are done and verified.
+T1 through T5 are done and verified.
 
 - `Gift` now exposes `approximate_price`, `photo_url`, `product_link` and
   `reserved_by_id`; `is_reserved` and the whole `GiftUpdate.is_reserved` surface
@@ -80,12 +80,21 @@ T1, T2 and T3 are done and verified.
 - `crud.py` now exposes `get_gift_by_id`, `get_gifts_by_owner` and
   `delete_gift(db_gift=)`, matching the crud tests.
 - Migration `ff6ca4f001fc` drops the phantom table and owns the schema.
+- `save_upload_file_to_static` stores an uploaded image under `static/<folder>`
+  with a generated name and only accepts image content types.
+- `/static` is mounted and the directory is created at startup, so a fresh
+  checkout boots even though an empty directory is not tracked by git.
+- The gifts router is registered and exposes list, read, create, update, delete
+  and an image upload endpoint. Creation is JSON; the image is uploaded
+  separately and referenced through `photo_url`. The routes delegate to `crud`,
+  so the tested data layer is the one in production use.
 
 ## Evidence
 
-- `cd backend && .venv/bin/python -m pytest` -> 61 passed, 11 failed. Every
-  remaining failure is `tests/api/routes/test_gifts.py` returning 404 because the
-  router is still unregistered (that is T5).
+- `cd backend && .venv/bin/python -m pytest` -> 74 passed, 0 failed.
+- End-to-end against the running server: login, create, list, read, update, image
+  upload, static serving of that image, rejection of a non-image upload, 404 on a
+  missing gift, and delete all returned the expected status and payload.
 - `alembic upgrade head` applied `1a31ce608336 -> ff6ca4f001fc`; `\d gift` shows
   `approximate_price`, `photo_url`, `product_link`, `reserved_by_id` and both
   foreign keys (owner CASCADE, reserved_by SET NULL).
