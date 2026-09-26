@@ -1,4 +1,22 @@
+# Secrets — never commit real credentials
+/.env
+/.env.*
+!/.env.example
+/.copier/.copier-answers.yml
+
+# Local tooling
 .vscode
+.idea
+.atl
+.codegraph
+.gemini
+.DS_Store
+
+# Generated and runtime artifacts
+/openapi.json
+backend/test.db
+backend/app/static/
+
 node_modules/
 /test-results/
 /playwright-report/
