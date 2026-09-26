@@ -1,24 +1,25 @@
 /*
-ABOUTME: Form component for creating and updating gifts.
-ABOUTME: Utilizes Shadcn UI components and react-hook-form for validation.
+ABOUTME: Form component for creating gifts.
+ABOUTME: Uploads the optional image first, then creates the gift as JSON.
 */
 
+import { Button, Input, Textarea, VStack } from "@chakra-ui/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { type SubmitHandler, useForm } from "react-hook-form"
 
-import {
-  Button,
-  Input,
-  Textarea,
-  VStack,
-} from "@chakra-ui/react"
-import { useState } from "react"
-
-import { type GiftCreate, GiftsService } from "@/client"
+import { GiftsService } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { Field } from "../ui/field"
+
+interface GiftFormValues {
+  name: string
+  approximate_price: number
+  description?: string
+  product_link?: string
+  photo?: FileList
+}
 
 const GiftForm = () => {
   const queryClient = useQueryClient()
@@ -28,7 +29,7 @@ const GiftForm = () => {
     handleSubmit,
     reset,
     formState: { errors, isValid, isSubmitting },
-  } = useForm<GiftCreate>({
+  } = useForm<GiftFormValues>({
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
@@ -40,14 +41,27 @@ const GiftForm = () => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: GiftCreate) => {
-      const formData = new FormData()
-      formData.append("name", data.name)
-      formData.append("approximate_price", data.approximate_price.toString())
-      if (data.description) formData.append("description", data.description)
-      if (data.product_link) formData.append("product_link", data.product_link)
-      if (data.photo) formData.append("photo", data.photo)
-      return GiftsService.createGift({ formData: formData })
+    mutationFn: async (data: GiftFormValues) => {
+      // Creation is JSON and the image travels in its own multipart request, so
+      // upload the picture first and reference the URL it returns.
+      let photoUrl: string | null = null
+      const file = data.photo?.[0]
+      if (file) {
+        const uploaded = await GiftsService.uploadGiftImage({
+          formData: { file },
+        })
+        photoUrl = uploaded.photo_url
+      }
+
+      return GiftsService.createGift({
+        requestBody: {
+          name: data.name,
+          approximate_price: data.approximate_price,
+          description: data.description || null,
+          product_link: data.product_link || null,
+          photo_url: photoUrl,
+        },
+      })
     },
     onSuccess: () => {
       showSuccessToast("Gift created successfully.")
@@ -61,7 +75,7 @@ const GiftForm = () => {
     },
   })
 
-  const onSubmit: SubmitHandler<GiftCreate> = (data) => {
+  const onSubmit: SubmitHandler<GiftFormValues> = (data) => {
     mutation.mutate(data)
   }
 
