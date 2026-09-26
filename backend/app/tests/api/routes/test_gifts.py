@@ -10,7 +10,7 @@ from app.tests.utils.user_and_gift import create_random_gift
 def test_create_gift(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    data = {"name": "Test Gift", "price": 10.0}
+    data = {"name": "Test Gift", "approximate_price": 10.0}
     response = client.post(
         f"{settings.API_V1_STR}/gifts/",
         headers=superuser_token_headers,
@@ -19,7 +19,7 @@ def test_create_gift(
     assert response.status_code == 200
     content = response.json()
     assert content["name"] == data["name"]
-    assert content["price"] == data["price"]
+    assert content["approximate_price"] == data["approximate_price"]
     assert "id" in content
     assert "owner_id" in content
 
@@ -35,7 +35,7 @@ def test_read_gift(
     assert response.status_code == 200
     content = response.json()
     assert content["name"] == gift.name
-    assert content["price"] == gift.price
+    assert content["approximate_price"] == gift.approximate_price
     assert content["id"] == str(gift.id)
     assert content["owner_id"] == str(gift.owner_id)
 
@@ -83,7 +83,7 @@ def test_update_gift(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     gift = create_random_gift(db)
-    data = {"name": "Updated name", "price": 20.0}
+    data = {"name": "Updated name", "approximate_price": 20.0}
     response = client.put(
         f"{settings.API_V1_STR}/gifts/{gift.id}",
         headers=superuser_token_headers,
@@ -92,7 +92,7 @@ def test_update_gift(
     assert response.status_code == 200
     content = response.json()
     assert content["name"] == data["name"]
-    assert content["price"] == data["price"]
+    assert content["approximate_price"] == data["approximate_price"]
     assert content["id"] == str(gift.id)
     assert content["owner_id"] == str(gift.owner_id)
 
@@ -100,7 +100,7 @@ def test_update_gift(
 def test_update_gift_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    data = {"name": "Updated name", "price": 20.0}
+    data = {"name": "Updated name", "approximate_price": 20.0}
     response = client.put(
         f"{settings.API_V1_STR}/gifts/{uuid.uuid4()}",
         headers=superuser_token_headers,
@@ -115,7 +115,7 @@ def test_update_gift_not_enough_permissions(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
     gift = create_random_gift(db)
-    data = {"name": "Updated name", "price": 20.0}
+    data = {"name": "Updated name", "approximate_price": 20.0}
     response = client.put(
         f"{settings.API_V1_STR}/gifts/{gift.id}",
         headers=normal_user_token_headers,
@@ -162,3 +162,31 @@ def test_delete_gift_not_enough_permissions(
     assert response.status_code == 400
     content = response.json()
     assert content["detail"] == "Not enough permissions"
+
+
+def test_upload_gift_image(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+    response = client.post(
+        f"{settings.API_V1_STR}/gifts/image",
+        headers=superuser_token_headers,
+        files={"file": ("photo.png", png, "image/png")},
+    )
+    assert response.status_code == 200
+    photo_url = response.json()["photo_url"]
+    assert photo_url.startswith("/static/gifts/")
+    assert photo_url.endswith(".png")
+
+
+def test_upload_gift_image_rejects_non_image(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/gifts/image",
+        headers=superuser_token_headers,
+        files={"file": ("notes.txt", b"not an image", "text/plain")},
+    )
+    assert response.status_code == 400
+    content = response.json()
+    assert content["detail"] == "Invalid file type. Only images are allowed."

@@ -1,10 +1,12 @@
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
 from app.core.config import settings
+from app.utils import STATIC_DIR
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -31,3 +33,8 @@ if settings.all_cors_origins:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Uploaded images live on disk. Create the directory before mounting so a fresh
+# checkout boots even though an empty directory is not tracked by git.
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
