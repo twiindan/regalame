@@ -109,7 +109,7 @@ def create_gift(*, session: Session, gift_in: "GiftCreate", owner_id: uuid.UUID)
     return db_gift
 
 
-def get_gift(*, session: Session, gift_id: uuid.UUID) -> "Gift | None":
+def get_gift_by_id(*, session: Session, gift_id: uuid.UUID) -> "Gift | None":
     from app.models import Gift
 
     statement = select(Gift).where(Gift.id == gift_id)
@@ -120,6 +120,17 @@ def get_gifts(*, session: Session, offset: int = 0, limit: int = 100) -> list["G
     from app.models import Gift
 
     statement = select(Gift).offset(offset).limit(limit)
+    return session.exec(statement).all()
+
+
+def get_gifts_by_owner(
+    *, session: Session, owner_id: uuid.UUID, offset: int = 0, limit: int = 100
+) -> list["Gift"]:
+    from app.models import Gift
+
+    statement = (
+        select(Gift).where(Gift.owner_id == owner_id).offset(offset).limit(limit)
+    )
     return session.exec(statement).all()
 
 
@@ -134,12 +145,6 @@ def update_gift(*, session: Session, db_gift: "Gift", gift_in: "GiftUpdate") -> 
     return db_gift
 
 
-def delete_gift(*, session: Session, gift_id: uuid.UUID) -> "Gift | None":
-    from app.models import Gift
-
-    gift = session.get(Gift, gift_id)
-    if not gift:
-        return None
-    session.delete(gift)
+def delete_gift(*, session: Session, db_gift: "Gift") -> None:
+    session.delete(db_gift)
     session.commit()
-    return gift

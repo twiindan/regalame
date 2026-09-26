@@ -34,8 +34,8 @@ def create_random_gift(db: Session, owner_id: uuid.UUID | None = None) -> Gift:
         user = create_random_user(db)
         owner_id = user.id
     name = random_lower_string()
-    price = random_float()
-    gift_in = GiftCreate(name=name, price=price)
+    approximate_price = random_float()
+    gift_in = GiftCreate(name=name, approximate_price=approximate_price)
     gift = crud.create_gift(session=db, gift_in=gift_in, owner_id=owner_id)
     return gift
 
