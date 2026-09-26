@@ -89,7 +89,6 @@ const GiftForm = () => {
           label="Name"
         >
           <Input
-            id="name"
             {...register("name", {
               required: "Name is required.",
             })}
@@ -105,7 +104,6 @@ const GiftForm = () => {
           label="Approximate Price"
         >
           <Input
-            id="approximate_price"
             {...register("approximate_price", {
               required: "Approximate Price is required.",
               valueAsNumber: true,
@@ -123,7 +121,6 @@ const GiftForm = () => {
           label="Description"
         >
           <Textarea
-            id="description"
             {...register("description")}
             placeholder="A brief description of the gift"
           />
@@ -135,7 +132,6 @@ const GiftForm = () => {
           label="Product Link"
         >
           <Input
-            id="product_link"
             {...register("product_link")}
             placeholder="https://example.com/product"
             type="url"
@@ -148,7 +144,6 @@ const GiftForm = () => {
           label="Gift Image"
         >
           <Input
-            id="photo"
             {...register("photo")}
             type="file"
             accept="image/*"
