@@ -71,6 +71,8 @@ jobs:
     - run: uv run bash scripts/generate-client.sh
       env:
         VIRTUAL_ENV: backend/.venv
+    - name: Create .env for CI
+      run: cp .env.example .env
     - run: docker compose build
     - run: docker compose down -v --remove-orphans
     - name: Run Playwright tests
