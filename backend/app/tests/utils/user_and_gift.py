@@ -1,12 +1,12 @@
+import uuid
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app import crud
 from app.core.config import settings
-from app.models import User, UserCreate, UserUpdate, Gift
-from app.tests.utils.utils import random_email, random_lower_string, random_float
-from app.models import GiftCreate
-import uuid
+from app.models import Gift, GiftCreate, User, UserCreate, UserUpdate
+from app.tests.utils.utils import random_email, random_float, random_lower_string
 
 
 def user_authentication_headers(
@@ -34,8 +34,8 @@ def create_random_gift(db: Session, owner_id: uuid.UUID | None = None) -> Gift:
         user = create_random_user(db)
         owner_id = user.id
     name = random_lower_string()
-    price = random_float()
-    gift_in = GiftCreate(name=name, price=price)
+    approximate_price = random_float()
+    gift_in = GiftCreate(name=name, approximate_price=approximate_price)
     gift = crud.create_gift(session=db, gift_in=gift_in, owner_id=owner_id)
     return gift
 

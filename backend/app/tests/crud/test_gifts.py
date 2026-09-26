@@ -1,7 +1,6 @@
 # ABOUTME: Unit tests for gift CRUD operations.
 # ABOUTME: Verifies the functionality of creating, reading, updating, and deleting gifts.
 
-import uuid
 
 from sqlmodel import Session
 
@@ -12,10 +11,10 @@ from app.tests.utils.user_and_gift import create_random_gift, create_random_user
 
 def test_create_gift(db: Session) -> None:
     user = create_random_user(db)
-    gift_in = GiftCreate(name="Test Gift", price=10.0)
+    gift_in = GiftCreate(name="Test Gift", approximate_price=10.0)
     gift = crud.create_gift(session=db, gift_in=gift_in, owner_id=user.id)
     assert gift.name == "Test Gift"
-    assert gift.price == 10.0
+    assert gift.approximate_price == 10.0
     assert gift.owner_id == user.id
     assert gift.id is not None
 

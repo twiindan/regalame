@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 
 from pydantic import EmailStr
 from sqlalchemy.orm import Mapped
@@ -45,7 +46,11 @@ class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
     items: list["Item"] = Relationship(back_populates="owner", cascade_delete=True)
-    gifts: list["Gift"] = Relationship(back_populates="owner", cascade_delete=True)
+    gifts: list["Gift"] = Relationship(
+        back_populates="owner",
+        cascade_delete=True,
+        sa_relationship_kwargs={"foreign_keys": "[Gift.owner_id]"},
+    )
 
 
 # Properties to return via API, id is always required
@@ -97,10 +102,9 @@ class ItemsPublic(SQLModel):
 class GiftBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
-    price: float | None = Field(default=None, ge=0)
-    image: str | None = Field(default=None, max_length=255)
-    link: str | None = Field(default=None, max_length=255)
-    is_reserved: bool = Field(default=False)
+    approximate_price: float | None = Field(default=None, ge=0)
+    photo_url: str | None = Field(default=None, max_length=255)
+    product_link: str | None = Field(default=None, max_length=255)
 
 
 # Properties to receive on gift creation
@@ -109,9 +113,10 @@ class GiftCreate(GiftBase):
 
 
 # Properties to receive on gift update
+# Reservation is deliberately not updatable here: claiming a gift goes through
+# a dedicated endpoint that guarantees exclusivity in the database.
 class GiftUpdate(GiftBase):
     name: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
-    is_reserved: bool | None = Field(default=None)
 
 
 # Database model, database table inferred from class name
@@ -119,18 +124,39 @@ class Gift(GiftBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(max_length=255)
     owner_id: uuid.UUID = Field(foreign_key="user.id", nullable=False)
-    owner: Mapped["User"] = Relationship(back_populates="gifts")
+    reserved_by_id: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", nullable=True
+    )
+    owner: Mapped["User"] = Relationship(
+        back_populates="gifts",
+        sa_relationship_kwargs={"foreign_keys": "[Gift.owner_id]"},
+    )
+    reserved_by: Mapped[Optional["User"]] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[Gift.reserved_by_id]"},
+    )
+
+    @property
+    def is_reserved(self) -> bool:
+        return self.reserved_by_id is not None
 
 
 # Properties to return via API, id is always required
 class GiftPublic(GiftBase):
     id: uuid.UUID
     owner_id: uuid.UUID
+    # Deliberately a boolean and not reserved_by_id: the shared public list must
+    # not reveal which user claimed a gift.
+    is_reserved: bool
 
 
 class GiftsPublic(SQLModel):
-    data: List[GiftPublic]
+    data: list[GiftPublic]
     count: int
+
+
+# Response returned after storing an uploaded gift image
+class GiftImageUpload(SQLModel):
+    photo_url: str
 
 
 # Generic message
