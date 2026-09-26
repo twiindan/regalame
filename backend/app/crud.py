@@ -1,6 +1,7 @@
 import uuid
 from typing import Any
 
+from sqlalchemy import update
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
@@ -143,6 +144,27 @@ def update_gift(*, session: Session, db_gift: "Gift", gift_in: "GiftUpdate") -> 
     session.commit()
     session.refresh(db_gift)
     return db_gift
+
+
+def claim_gift(*, session: Session, gift_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    """Atomically reserve a gift for a user.
+
+    Returns True when this caller won the race. The database is the arbiter, not
+    the application: two concurrent callers both evaluate reserved_by_id IS NULL,
+    but under READ COMMITTED the second UPDATE blocks on the first one's row
+    lock, re-evaluates the predicate after that commit, matches no row and
+    updates zero rows.
+    """
+    from app.models import Gift
+
+    result = session.execute(
+        update(Gift)
+        .where(Gift.id == gift_id, Gift.reserved_by_id.is_(None))
+        .values(reserved_by_id=user_id)
+        .execution_options(synchronize_session=False)
+    )
+    session.commit()
+    return result.rowcount > 0
 
 
 def delete_gift(*, session: Session, db_gift: "Gift") -> None:
