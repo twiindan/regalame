@@ -44,8 +44,8 @@ Out of scope: unrelated template improvements and the inherited `Item` demo.
 - [x] T3 Align the `crud.py` gift functions with the crud tests
 - [x] T4 Implement `save_upload_file_to_static` and serve static uploads
 - [x] T5 Register the gifts router and complete the CRUD endpoints
-- [ ] T6 Add an atomic claim endpoint with a database-level exclusivity guarantee
-- [ ] T7 Public per-user gift listing behind a shareable link
+- [x] T6 Add an atomic claim endpoint with a database-level exclusivity guarantee
+- [x] T7 Public per-user gift listing behind a shareable link
 - [ ] T8 Regenerate `openapi.json`, the frontend client and the route tree
 - [ ] T9 Align `GiftForm.tsx` and add a navigation entry
 - [ ] T10 Move the gift e2e spec out of `frontend/temp_tests`
@@ -69,7 +69,7 @@ T1, T2, T3 only: domain vocabulary, migration and crud alignment.
 
 ## Progress
 
-T1 through T5 are done and verified.
+T1 through T7 are done and verified.
 
 - `Gift` now exposes `approximate_price`, `photo_url`, `product_link` and
   `reserved_by_id`; `is_reserved` and the whole `GiftUpdate.is_reserved` surface
@@ -88,10 +88,20 @@ T1 through T5 are done and verified.
   and an image upload endpoint. Creation is JSON; the image is uploaded
   separately and referenced through `photo_url`. The routes delegate to `crud`,
   so the tested data layer is the one in production use.
+- Claiming a gift ("Me lo quedo") is its own endpoint. `crud.claim_gift` runs
+  `UPDATE ... WHERE reserved_by_id IS NULL` and reports whether this caller won,
+  so the database decides the race rather than the application.
+- `GiftPublic` exposes the boolean `is_reserved` instead of `reserved_by_id`,
+  because the shared public list must not reveal which user claimed a gift.
+- The public listing is unauthenticated and reachable from a shareable link.
+  A second claim returns 409 and reserving your own gift returns 400.
 
 ## Evidence
 
-- `cd backend && .venv/bin/python -m pytest` -> 74 passed, 0 failed.
+- `cd backend && .venv/bin/python -m pytest` -> 82 passed, 0 failed.
+- Concurrency proof: 12 distinct users claimed the same gift simultaneously
+  against the running server. Exactly one returned 200, eleven returned 409, none
+  errored, and the gift ended up reserved.
 - End-to-end against the running server: login, create, list, read, update, image
   upload, static serving of that image, rejection of a non-image upload, 404 on a
   missing gift, and delete all returned the expected status and payload.
@@ -101,3 +111,9 @@ T1 through T5 are done and verified.
 - Reversibility checked: `alembic downgrade -1` removed the table,
   `alembic upgrade head` recreated it.
 - `configure_mappers()` succeeds with the two foreign keys to `user`.
+
+## Open questions
+
+- The spec has no way to release a claimed gift, so a misclick is permanent. No
+  release endpoint was added because `description.md` does not ask for one; this
+  is a product decision to confirm, not an oversight.

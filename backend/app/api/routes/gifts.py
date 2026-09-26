@@ -14,6 +14,7 @@ from app.models import (
     GiftsPublic,
     GiftUpdate,
     Message,
+    User,
 )
 from app.utils import save_upload_file_to_static
 
@@ -42,6 +43,27 @@ def read_gifts(
             session=session, owner_id=current_user.id, offset=skip, limit=limit
         )
 
+    return GiftsPublic(data=gifts, count=count)
+
+
+@router.get("/public/{user_id}", response_model=GiftsPublic)
+def read_public_gifts(
+    session: SessionDep, user_id: uuid.UUID, skip: int = 0, limit: int = 100
+) -> Any:
+    """
+    Public listing of another user's gifts, reachable from the shared link.
+
+    No authentication on purpose: the product spec requires that visitors without
+    an account can open a shared link and see the list.
+    """
+    if not session.get(User, user_id):
+        raise HTTPException(status_code=404, detail="User not found")
+    count = session.exec(
+        select(func.count()).select_from(Gift).where(Gift.owner_id == user_id)
+    ).one()
+    gifts = crud.get_gifts_by_owner(
+        session=session, owner_id=user_id, offset=skip, limit=limit
+    )
     return GiftsPublic(data=gifts, count=count)
 
 
@@ -100,6 +122,26 @@ def update_gift(
     if not current_user.is_superuser and (gift.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
     return crud.update_gift(session=session, db_gift=gift, gift_in=gift_in)
+
+
+@router.post("/{id}/claim", response_model=GiftPublic)
+def claim_gift(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) -> Any:
+    """
+    Claim a gift ("Me lo quedo").
+
+    Exclusivity is enforced by the database, not by this check: the UPDATE only
+    matches a row whose reserved_by_id is still NULL, so exactly one concurrent
+    caller can win and every other one gets 409.
+    """
+    gift = session.get(Gift, id)
+    if not gift:
+        raise HTTPException(status_code=404, detail="Gift not found")
+    if gift.owner_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot reserve your own gift")
+    if not crud.claim_gift(session=session, gift_id=id, user_id=current_user.id):
+        raise HTTPException(status_code=409, detail="Gift is already reserved")
+    session.refresh(gift)
+    return gift
 
 
 @router.delete("/{id}")

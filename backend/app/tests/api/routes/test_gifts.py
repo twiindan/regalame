@@ -190,3 +190,113 @@ def test_upload_gift_image_rejects_non_image(
     assert response.status_code == 400
     content = response.json()
     assert content["detail"] == "Invalid file type. Only images are allowed."
+
+
+def test_claim_gift(
+    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
+) -> None:
+    gift = create_random_gift(db)
+    assert gift.reserved_by_id is None
+    response = client.post(
+        f"{settings.API_V1_STR}/gifts/{gift.id}/claim",
+        headers=normal_user_token_headers,
+    )
+    assert response.status_code == 200
+    content = response.json()
+    assert content["id"] == str(gift.id)
+    assert content["is_reserved"] is True
+    assert "reserved_by_id" not in content
+
+
+def test_claim_gift_twice_conflicts(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    gift = create_random_gift(db)
+    first = client.post(
+        f"{settings.API_V1_STR}/gifts/{gift.id}/claim",
+        headers=normal_user_token_headers,
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        f"{settings.API_V1_STR}/gifts/{gift.id}/claim",
+        headers=superuser_token_headers,
+    )
+    assert second.status_code == 409
+    assert second.json()["detail"] == "Gift is already reserved"
+
+
+def test_claim_gift_not_found(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/gifts/{uuid.uuid4()}/claim",
+        headers=normal_user_token_headers,
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Gift not found"
+
+
+def test_claim_own_gift_is_rejected(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    created = client.post(
+        f"{settings.API_V1_STR}/gifts/",
+        headers=superuser_token_headers,
+        json={"name": "My own gift", "approximate_price": 5.0},
+    )
+    assert created.status_code == 200
+
+    response = client.post(
+        f"{settings.API_V1_STR}/gifts/{created.json()['id']}/claim",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "You cannot reserve your own gift"
+
+
+def test_claim_gift_requires_authentication(client: TestClient, db: Session) -> None:
+    gift = create_random_gift(db)
+    response = client.post(f"{settings.API_V1_STR}/gifts/{gift.id}/claim")
+    assert response.status_code == 401
+
+
+def test_read_public_gifts_without_authentication(
+    client: TestClient, db: Session
+) -> None:
+    gift = create_random_gift(db)
+    response = client.get(f"{settings.API_V1_STR}/gifts/public/{gift.owner_id}")
+    assert response.status_code == 200
+    content = response.json()
+    assert content["count"] >= 1
+    assert str(gift.id) in [item["id"] for item in content["data"]]
+
+    # The shared view must expose only whether a gift is taken, never by whom.
+    for item in content["data"]:
+        assert "is_reserved" in item
+        assert "reserved_by_id" not in item
+
+
+def test_read_public_gifts_unknown_user(client: TestClient) -> None:
+    response = client.get(f"{settings.API_V1_STR}/gifts/public/{uuid.uuid4()}")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"
+
+
+def test_read_public_gifts_reflects_reserved_state(
+    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
+) -> None:
+    gift = create_random_gift(db)
+    claimed = client.post(
+        f"{settings.API_V1_STR}/gifts/{gift.id}/claim",
+        headers=normal_user_token_headers,
+    )
+    assert claimed.status_code == 200
+
+    response = client.get(f"{settings.API_V1_STR}/gifts/public/{gift.owner_id}")
+    assert response.status_code == 200
+    item = next(g for g in response.json()["data"] if g["id"] == str(gift.id))
+    assert item["is_reserved"] is True
